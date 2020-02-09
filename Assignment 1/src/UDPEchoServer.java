@@ -4,42 +4,59 @@
 */
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
+import java.net.*;
 
-public class UDPEchoServer {
-    public static final int BUFSIZE= 1024;
-    public static final int MYPORT= 4950;
+public class UDPEchoServer extends NetworkLayer {
 
-    public static void main(String[] args) throws IOException {
-        byte[] buf= new byte[BUFSIZE];
+    public UDPEchoServer(String buffer, String serverPort) {
+        super(buffer, serverPort);
+    }
 
-        /* Create socket */
-        DatagramSocket socket= new DatagramSocket(null);
+    public static void main(String[] args) {
+        UDPEchoServer echoServer = new UDPEchoServer(args[0], args[1]);
+        DatagramSocket socket = null;
+
+        try {
+            /* Create socket */
+            socket = new DatagramSocket(null);
+        } catch (SocketException e) {
+            System.err.println("Cannot create socket.");
+            System.exit(1);
+        }
 
         /* Create local bind point */
-        SocketAddress localBindPoint= new InetSocketAddress(MYPORT);
-        socket.bind(localBindPoint);
+        SocketAddress localBindPoint = new InetSocketAddress(echoServer.serverPort);
+        try {
+            socket.bind(localBindPoint);
+        } catch (SocketException e) {
+            System.err.println("Cannot bind to the port, the port is used. " + e.getMessage());
+        }
         while (true) {
             /* Create datagram packet for receiving message */
-            DatagramPacket receivePacket= new DatagramPacket(buf, buf.length);
+            DatagramPacket receivePacket = new DatagramPacket(echoServer.buf, echoServer.buf.length);
 
             /* Receiving message */
-            socket.receive(receivePacket);
+            try {
+                socket.receive(receivePacket);
+            } catch (IOException e) {
+                System.err.println("Cannot receive the message.");
+            }
 
             /* Create datagram packet for sending message */
-            DatagramPacket sendPacket=
+            DatagramPacket sendPacket =
                     new DatagramPacket(receivePacket.getData(),
                             receivePacket.getLength(),
                             receivePacket.getAddress(),
                             receivePacket.getPort());
 
             /* Send message*/
-            socket.send(sendPacket);
-            System.out.printf("UDP echo request from %s", receivePacket.getAddress().getHostAddress());
-            System.out.printf(" using port %d\n", receivePacket.getPort());
+            try {
+                socket.send(sendPacket);
+                System.out.printf("UDP echo request from %s", receivePacket.getAddress().getHostAddress());
+                System.out.printf(" using port %d\n", receivePacket.getPort());
+            } catch (IOException e) {
+                System.err.println("Cannot send the message.");
+            }
         }
     }
 }

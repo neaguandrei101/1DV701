@@ -141,7 +141,7 @@ public abstract class NetworkLayer {
      20 bytes IPv4 header, which is the maximum
      therefore my buffer size would be 65515
     */
-    protected static boolean checkBufferSize(String bufferSize) {
+    public static boolean checkBufferSize(String bufferSize) {
         int buffer;
         try {
             buffer = Integer.parseInt(bufferSize);
