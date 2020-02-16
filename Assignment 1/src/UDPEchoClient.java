@@ -44,33 +44,57 @@ public class UDPEchoClient extends NetworkLayer {
         DatagramPacket receivePacket = new DatagramPacket(echoClient.buf, echoClient.buf.length);
 
         while (true) {
-
             UDPEchoClient.sendAndReceiveOneSec(socket, sendPacket, receivePacket,
                     echoClient.transmissionRate, echoClient.myMessage);
-
         }
     }
 
-    public static void sendAndReceiveOneSec(DatagramSocket datagramSocket, DatagramPacket sendPacket,
+    /* this function is used for VG task 1
+    I used Thread.sleep here because I fixed a couple bugs that I have uncovered in Problem 5
+    Complete accuracy is not guaranteed to the second
+    */
+    private static void sendAndReceiveOneSec(DatagramSocket datagramSocket, DatagramPacket sendPacket,
                                             DatagramPacket receivePacket, int transmissionRate, String message) {
         final long RUNTIME = 1000;
         int packets = 0;
-        long currentTime = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
         if (transmissionRate == 0 || transmissionRate == 1) {
             UDPEchoClient.sendAndReceive(datagramSocket, sendPacket, receivePacket, message);
             packets++;
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                System.exit(1);
+            }
         } else {
-            while ((System.currentTimeMillis() < currentTime + RUNTIME) && (packets < transmissionRate)) {
+            while (packets < transmissionRate) {
                 UDPEchoClient.sendAndReceive(datagramSocket, sendPacket, receivePacket, message);
                 packets++;
-                if (packets == transmissionRate)
+                if(System.currentTimeMillis() - start < RUNTIME){
+                    try {
+                        Thread.sleep(RUNTIME / transmissionRate);
+                    } catch (InterruptedException e) {
+                        System.exit(1);
+                    }
+                }
+                if(System.currentTimeMillis() > start + RUNTIME)
                     break;
+                if (packets == transmissionRate) {
+                    try {
+                        Thread.sleep(start+ RUNTIME - System.currentTimeMillis());
+                    } catch (InterruptedException e) {
+                        System.exit(1);
+                    }
+                    break;
+                }
+
             }
         }
         System.out.printf("Number of messages sent in a second: %d out of %d || ", packets, transmissionRate);
         System.out.printf("Number of messages left: %d\n", transmissionRate - packets);
     }
 
+    //sends and receives a message one time
     private static void sendAndReceive(DatagramSocket datagramSocket, DatagramPacket sendPacket,
                                        DatagramPacket receivePacket, String message) {
         try {
@@ -82,7 +106,7 @@ public class UDPEchoClient extends NetworkLayer {
         try {
             datagramSocket.receive(receivePacket);
         } catch (IOException e) {
-            System.err.println("Cannot read!");
+            System.err.println("Cannot read! The server might not be running");
             System.exit(1);
         }
 

@@ -30,6 +30,7 @@ public class UDPEchoServer extends NetworkLayer {
             socket.bind(localBindPoint);
         } catch (SocketException e) {
             System.err.println("Cannot bind to the port, the port is used. " + e.getMessage());
+            System.exit(1);
         }
         while (true) {
             /* Create datagram packet for receiving message */

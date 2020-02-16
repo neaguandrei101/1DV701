@@ -36,14 +36,18 @@ public abstract class NetworkLayer {
                     String.format("Provide the correct transmission rate in the java arguments. Your input %s", transmissionRate)
             );
         }
-        this.transmissionRate = Integer.parseInt(transmissionRate);
+        if (Integer.parseInt(transmissionRate) == 0)
+            this.transmissionRate = Integer.parseInt(transmissionRate) + 1;
+        else
+            this.transmissionRate = Integer.parseInt(transmissionRate);
 
         this.myMessage = "a".repeat(Integer.parseInt(messageSize));
         if (this.myMessage.length() > this.bufferSize) {
             System.err.println("The message is too long for the current buffer, it will cause problems");
         }
     }
-        //Used by TCPEchoClient
+
+    //Used by TCPEchoClient
     public NetworkLayer(String buffer, String ipAddress, String serverPort, String messageSize) {
         //check buffer
         if (!NetworkLayer.checkBufferSize(buffer))
@@ -73,9 +77,7 @@ public abstract class NetworkLayer {
         }
     }
 
-    /* Check buffer size and create a byte array using the buffer
-       Used by TCPEchoServer
-    */
+    //Used by TCPEchoServer and UDPEchoServer
     public NetworkLayer(String buffer, String serverPort) {
         if (!NetworkLayer.checkBufferSize(buffer))
             throw new IllegalArgumentException(
@@ -91,7 +93,6 @@ public abstract class NetworkLayer {
         }
         this.serverPort = Integer.parseInt(serverPort);
     }
-
 
     //The turn rate must be a positive integer and be parsable to an int
     public static boolean checkTransmissionRate(String rateArgument) {
@@ -120,6 +121,10 @@ public abstract class NetworkLayer {
 
     /*This method validates if the IP4 address is valid
       It also accepts localhost as an IP, used for development
+      It splits the string in 4 groups, counts them and makes sure the
+      numbers are in between 1 and 255
+      The regex finds the . in the string, it would be \. but
+      here it is \\. because of the escape character \
      */
     public static boolean checkIpAddress(String ip) {
         if (ip.compareTo("localhost") == 0) {
@@ -137,8 +142,8 @@ public abstract class NetworkLayer {
         }
     }
 
-    /*Maximum size for IPv4 data gram  is 65535 bytes
-     20 bytes IPv4 header, which is the maximum
+    /*Maximum size for IPv4 datagram  is 65535 bytes
+     20 bytes IPv4 header(TCP), which is the maximum
      therefore my buffer size would be 65515
     */
     public static boolean checkBufferSize(String bufferSize) {

@@ -17,15 +17,7 @@ public class TCPEchoServer extends NetworkLayer {
             serverSocket.bind(localBindPoint);
         } catch (IOException e) {
             System.err.println("Cannot start socket.");
-        } finally {
-            try {
-                serverSocket.close();
-                System.exit(1);
-            } catch (IOException e) {
-                System.err.println("Cannot close the socket socket.");
-            }
         }
-
 
         while (true) {
             try {
@@ -33,17 +25,12 @@ public class TCPEchoServer extends NetworkLayer {
                 System.out.println(String.format("Accepting connection from %s ", clientSocket.getInetAddress()));
                 new EchoServerThread(clientSocket, echoServer.buf).start();
             } catch (IOException e) {
-                System.err.println("Cannot accept connection.");
-            } finally {
-                try {
-                    serverSocket.close();
-                } catch (IOException e) {
-                    System.err.println("Cannot close the socket socket.");
-                }
+                System.err.println("No connection.");
             }
         }
     }
 
+    // private object that runs the threads
     private static class EchoServerThread extends Thread {
         private Socket clientSocket;
         private byte[] buf;
@@ -63,10 +50,11 @@ public class TCPEchoServer extends NetworkLayer {
                         break;
                     }
                     String receivedMessage = new String(buf, 0, read);
-                    System.out.println(receivedMessage);
+                    System.out.println("Message sent.");
                     outputStream.write(receivedMessage.getBytes());
                 } catch (IOException e) {
                     System.err.println("Cannot read or write.");
+                    break;
                 }
             }
         }
