@@ -1,6 +1,7 @@
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import requests.RequestParser;
+// TODO remove logger after done
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -21,32 +22,46 @@ public class ServerThread extends Thread {
 
     @Override
     public void run() {
-        try (OutputStream outputStream = socket.getOutputStream()) {
-            if (rootPath.endsWith(".htm") || rootPath.endsWith(".html"))
-                this.responseHtml(this.rootPath, outputStream);
-            else if (rootPath.endsWith(".png") || rootPath.endsWith(".PNG"))
-                this.responseImage(rootPath, outputStream);
+        try (OutputStream outputStream = socket.getOutputStream();
+             InputStream inputStream = socket.getInputStream()) {
+            String fileNameFromRequest = new RequestParser(inputStream).getHttpGetFile();
+            logger.info("Request for file from client: " + fileNameFromRequest);
+            if (fileNameFromRequest.endsWith(".htm") || fileNameFromRequest.endsWith(".html")) {
+                this.responseHtml(this.rootPath, fileNameFromRequest, outputStream);
+                inputStream.close();
+                socket.close();
+            } else if (fileNameFromRequest.endsWith(".png") || fileNameFromRequest.endsWith(".PNG")) {
+                this.responseImage(rootPath, fileNameFromRequest, outputStream);
+                inputStream.close();
+                socket.close();
+            }
         } catch (IOException e) {
-            logger.error("Cannot send response : ", e);
+            logger.error("Cannot get the output streams: ", e);
         }
     }
 
-    //TODO remove hardcode after impl input
-    private void responseImage(String rootPath, OutputStream outputStream) throws IOException {
-        Path path = Paths.get("/home/paperman/Documents/Repos/1DV701/Assignment 2/src/main/resources/", "banana.png");
-        byte[] fileContent = Files.readAllBytes(path);
+    //TODO add support for 1 file in directory
+    private void responseImage(String rootPath, String fileName, OutputStream outputStream) throws IOException {
+        BufferedOutputStream dataOut = new BufferedOutputStream(outputStream);
+        Path path = Paths.get(rootPath, fileName);
 
+        byte[] fileContent = Files.readAllBytes(path);
         String response = "HTTP/1.1 200" + "\r\n" +
-                "Content-Length: " + fileContent.length+ "\r\n" +
+                "Content-Length: " + fileContent.length + "\r\n" +
                 "Content-Type: image/png" + "\r\n" + "\r\n";
-        outputStream.write(response.getBytes());
-        outputStream.write(fileContent);
+
+        dataOut.write(response.getBytes(), 0, response.length());
+        dataOut.flush();
+        dataOut.write(fileContent, 0, fileContent.length);
+        dataOut.flush();
+        outputStream.close();
         logger.info(".png sent.");
     }
 
-    //TODO remove hardcode after impl input
-    private void responseHtml(String rootPath, OutputStream outputStream) throws IOException {
-        Path path = Paths.get("/home/paperman/Documents/Repos/1DV701/Assignment 2/src/main/resources/", "test.html");
+    //TODO add support for 1 file in directory
+    private void responseHtml(String rootPath, String fileName, OutputStream outputStream) throws IOException {
+        Path path = Paths.get(rootPath, fileName);
+
         StringBuilder sb = new StringBuilder();
         try (BufferedReader bufferedReader = Files.newBufferedReader(path)) {
             String line;
@@ -66,6 +81,7 @@ public class ServerThread extends Thread {
                 "\r\n" + "\r\n" +
                 html;
         outputStream.write(response.getBytes());
+        outputStream.close();
         logger.info(".html sent.");
     }
 }

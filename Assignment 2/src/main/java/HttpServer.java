@@ -29,6 +29,7 @@ public class HttpServer {
                     logger.error("Cannot accept : ", e);
                 }
                 logger.info("Connection started.");
+
                 ServerThread serverThread = new ServerThread(socket, rootPath);
                 serverThread.start();
             }
