@@ -4,6 +4,8 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -24,34 +26,29 @@ public class ServerThread extends Thread {
                 this.responseHtml(this.rootPath, outputStream);
             else if (rootPath.endsWith(".png") || rootPath.endsWith(".PNG"))
                 this.responseImage(rootPath, outputStream);
-            logger.info("Response sent.");
         } catch (IOException e) {
             logger.error("Cannot send response : ", e);
         }
     }
 
+    //TODO remove hardcode after impl input
     private void responseImage(String rootPath, OutputStream outputStream) throws IOException {
-        File file = new File(rootPath);
-        byte[] fileContent = new byte[0];
-        try {
-            fileContent = Files.readAllBytes(file.toPath());
-        } catch (IOException e) {
-            logger.error("Cannot read from file : ", e);
-        }
-        String response = "HTTP/1.1 200 OK" + "\r\n" +                //Status line
-                "Content-Length: " + fileContent.length + "\r\n" +    //HTTP headers
-                "Content-Type: image/png" +
-                "Content-Location: /src/main/resources/" + "\r\n" +
-                "\r\n" + "\r\n";
-        outputStream.write(response.getBytes());
-        outputStream.write(fileContent);                              //Data block
+        Path path = Paths.get("/home/paperman/Documents/Repos/1DV701/Assignment 2/src/main/resources/", "banana.png");
+        byte[] fileContent = Files.readAllBytes(path);
 
+        String response = "HTTP/1.1 200" + "\r\n" +
+                "Content-Length: " + fileContent.length+ "\r\n" +
+                "Content-Type: image/png" + "\r\n" + "\r\n";
+        outputStream.write(response.getBytes());
+        outputStream.write(fileContent);
+        logger.info(".png sent.");
     }
 
+    //TODO remove hardcode after impl input
     private void responseHtml(String rootPath, OutputStream outputStream) throws IOException {
+        Path path = Paths.get("/home/paperman/Documents/Repos/1DV701/Assignment 2/src/main/resources/", "test.html");
         StringBuilder sb = new StringBuilder();
-        try (FileReader fileReader = new FileReader(rootPath);
-             BufferedReader bufferedReader = new BufferedReader(fileReader)) {
+        try (BufferedReader bufferedReader = Files.newBufferedReader(path)) {
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 sb.append(line);
@@ -69,5 +66,6 @@ public class ServerThread extends Thread {
                 "\r\n" + "\r\n" +
                 html;
         outputStream.write(response.getBytes());
+        logger.info(".html sent.");
     }
 }
