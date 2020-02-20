@@ -8,6 +8,7 @@ public abstract class NetworkLayer {
     protected String serverIp;
     protected String myMessage;
 
+    //TODO add abstract functions that are used by the rest
     //used by UDPEchoClient
     public NetworkLayer(String buffer, String ipAddress, String serverPort, String transmissionRate, String messageSize) {
         if (!NetworkLayer.checkBufferSize(buffer))

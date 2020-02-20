@@ -7,8 +7,6 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
-import java.util.function.Predicate;
 
 public class ServerThread extends Thread {
     static final Logger logger = LoggerFactory.getLogger(ServerThread.class);
@@ -24,14 +22,22 @@ public class ServerThread extends Thread {
     public void run() {
         try (OutputStream outputStream = socket.getOutputStream();
              InputStream inputStream = socket.getInputStream()) {
-            String fileNameFromRequest = new RequestParser(inputStream).getHttpGetFile();
-            logger.info("Request for file from client: " + fileNameFromRequest);
-            if (fileNameFromRequest.endsWith(".htm") || fileNameFromRequest.endsWith(".html")) {
-                this.responseHtml(this.rootPath, fileNameFromRequest, outputStream);
+            String httpDirectory = new RequestParser(inputStream).getHttpDirectory();
+            logger.info("Request for file from client: " + httpDirectory);
+            if (httpDirectory.startsWith("/") && !httpDirectory.endsWith("/") && !httpDirectory.contains(".")) {
+                this.responseHtml(this.rootPath, httpDirectory + "/index.html", outputStream);
                 inputStream.close();
                 socket.close();
-            } else if (fileNameFromRequest.endsWith(".png") || fileNameFromRequest.endsWith(".PNG")) {
-                this.responseImage(rootPath, fileNameFromRequest, outputStream);
+            } else if (httpDirectory.startsWith("/") && !httpDirectory.contains(".")) {
+                this.responseHtml(this.rootPath, httpDirectory + "index.html", outputStream);
+                inputStream.close();
+                socket.close();
+            }else if (httpDirectory.endsWith(".htm") || httpDirectory.endsWith(".html")) {
+                this.responseHtml(this.rootPath, httpDirectory, outputStream);
+                inputStream.close();
+                socket.close();
+            } else if (httpDirectory.endsWith(".png") || httpDirectory.endsWith(".PNG")) {
+                this.responseImage(rootPath, httpDirectory, outputStream);
                 inputStream.close();
                 socket.close();
             }
@@ -40,10 +46,12 @@ public class ServerThread extends Thread {
         }
     }
 
-    //TODO add support for 1 file in directory
+    //TODO remove hardcode after impl GET
     private void responseImage(String rootPath, String fileName, OutputStream outputStream) throws IOException {
         BufferedOutputStream dataOut = new BufferedOutputStream(outputStream);
         Path path = Paths.get(rootPath, fileName);
+        if (!Files.exists(path))
+            logger.error("Cannot get the file does not exist");
 
         byte[] fileContent = Files.readAllBytes(path);
         String response = "HTTP/1.1 200" + "\r\n" +
@@ -58,30 +66,20 @@ public class ServerThread extends Thread {
         logger.info(".png sent.");
     }
 
-    //TODO add support for 1 file in directory
-    private void responseHtml(String rootPath, String fileName, OutputStream outputStream) throws IOException {
-        Path path = Paths.get(rootPath, fileName);
-
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader bufferedReader = Files.newBufferedReader(path)) {
-            String line;
-            while ((line = bufferedReader.readLine()) != null) {
-                sb.append(line);
-            }
-        } catch (IOException e) {
-            logger.error("Cannot read from file : ", e);
-        }
-        String result = sb.toString();
-        Optional<String> opt = Optional.of(result).filter(Predicate.not(String::isEmpty));
-        String html = opt.orElseThrow(() -> new RuntimeException("The file read is empty"));
-        String response = "HTTP/1.1 200 OK" + "\r\n" +
-                "Content-Length: " + html.getBytes().length + "\r\n" +
-                "Content-Type: text/html" + "\r\n" +
-                "Content-Location: /src/main/resources/" + "\r\n" +
-                "\r\n" + "\r\n" +
-                html;
+    //TODO remove hardcode after impl GET
+    private void responseHtml(String rootPath, String relativePath, OutputStream outputStream) throws IOException {
+        Path path = Paths.get(rootPath, relativePath);
+        if (!Files.exists(path))
+            logger.error("Cannot get the file does not exist");
+        String response =
+                "HTTP/1.1 200 OK" + "\r\n" +
+                        "Content-Length: " + Files.readAllBytes(path).length + "\r\n" +
+                        "Content-Type: text/html" + "\r\n" +
+                        "Content-Location: /src/main/resources/" + "\r\n" +
+                        "\r\n";
         outputStream.write(response.getBytes());
+        outputStream.write(Files.readAllBytes(path));
         outputStream.close();
-        logger.info(".html sent.");
+        logger.info(relativePath + " sent.");
     }
 }

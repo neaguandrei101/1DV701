@@ -19,7 +19,7 @@ public class RequestParser {
     }
 
     // reads the first line, use one
-    public String getHttpGetFile() throws IOException {
+    public String getHttpDirectory() throws IOException {
         var in = new BufferedReader(new InputStreamReader(inputStream));
         String str = in.readLine();
         String[] words = str.split("\\s+");
