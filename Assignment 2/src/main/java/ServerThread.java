@@ -1,7 +1,9 @@
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import requests.RequestParser;
-// TODO remove logger after done
+import responses.ResponseFactory;
+
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -32,7 +34,7 @@ public class ServerThread extends Thread {
                 this.responseHtml(this.rootPath, httpDirectory + "index.html", outputStream);
                 inputStream.close();
                 socket.close();
-            }else if (httpDirectory.endsWith(".htm") || httpDirectory.endsWith(".html")) {
+            } else if (httpDirectory.endsWith(".htm") || httpDirectory.endsWith(".html")) {
                 this.responseHtml(this.rootPath, httpDirectory, outputStream);
                 inputStream.close();
                 socket.close();
@@ -46,40 +48,49 @@ public class ServerThread extends Thread {
         }
     }
 
-    //TODO remove hardcode after impl GET
     private void responseImage(String rootPath, String fileName, OutputStream outputStream) throws IOException {
         BufferedOutputStream dataOut = new BufferedOutputStream(outputStream);
         Path path = Paths.get(rootPath, fileName);
-        if (!Files.exists(path))
-            logger.error("Cannot get the file does not exist");
+        if (!Files.exists(path)) {
+            String response = "HTTP/1.1 404 File Not Found" + "\r\n" + "\r\n";
+            dataOut.write(response.getBytes());
+            dataOut.flush();
+            dataOut.write(ResponseFactory.get404Bytes());
+            dataOut.close();
+        } else {
+            byte[] fileContent = Files.readAllBytes(path);
+            String response = "HTTP/1.1 200" + "\r\n" +
+                    "Content-Length: " + fileContent.length + "\r\n" +
+                    "Content-Type: image/png" + "\r\n" + "\r\n";
 
-        byte[] fileContent = Files.readAllBytes(path);
-        String response = "HTTP/1.1 200" + "\r\n" +
-                "Content-Length: " + fileContent.length + "\r\n" +
-                "Content-Type: image/png" + "\r\n" + "\r\n";
-
-        dataOut.write(response.getBytes(), 0, response.length());
-        dataOut.flush();
-        dataOut.write(fileContent, 0, fileContent.length);
-        dataOut.flush();
-        outputStream.close();
-        logger.info(".png sent.");
+            dataOut.write(response.getBytes(), 0, response.length());
+            dataOut.flush();
+            dataOut.write(fileContent, 0, fileContent.length);
+            outputStream.close();
+            logger.info(".png sent.");
+        }
     }
 
-    //TODO remove hardcode after impl GET
     private void responseHtml(String rootPath, String relativePath, OutputStream outputStream) throws IOException {
+        BufferedOutputStream dataOut = new BufferedOutputStream(outputStream);
         Path path = Paths.get(rootPath, relativePath);
-        if (!Files.exists(path))
-            logger.error("Cannot get the file does not exist");
-        String response =
-                "HTTP/1.1 200 OK" + "\r\n" +
-                        "Content-Length: " + Files.readAllBytes(path).length + "\r\n" +
-                        "Content-Type: text/html" + "\r\n" +
-                        "Content-Location: /src/main/resources/" + "\r\n" +
-                        "\r\n";
-        outputStream.write(response.getBytes());
-        outputStream.write(Files.readAllBytes(path));
-        outputStream.close();
-        logger.info(relativePath + " sent.");
+        if (!Files.exists(path)) {
+            String response = "HTTP/1.1 404 File Not Found" + "\r\n" + "\r\n";
+            dataOut.write(response.getBytes());
+            dataOut.flush();
+            dataOut.write(ResponseFactory.get404Bytes());
+            dataOut.close();
+        } else {
+            String response =
+                    "HTTP/1.1 200 OK" + "\r\n" +
+                            "Content-Length: " + Files.readAllBytes(path).length + "\r\n" +
+                            "Content-Type: text/html" + "\r\n" +
+                            "Content-Location: /src/main/resources/" + "\r\n" + "\r\n";
+            outputStream.write(response.getBytes());
+            outputStream.write(Files.readAllBytes(path));
+            outputStream.close();
+            logger.info(relativePath + " sent.");
+        }
     }
+
 }
