@@ -1,3 +1,4 @@
+import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,6 +10,7 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 
 public class ServerThread extends Thread {
     private static final Logger logger = LoggerFactory.getLogger(ServerThread.class);
@@ -24,49 +26,45 @@ public class ServerThread extends Thread {
     public void run() {
         try (OutputStream outputStream = socket.getOutputStream();
              InputStream inputStream = socket.getInputStream()) {
-            String httpRequestDirectory = new RequestParser(inputStream).getHttpDirectory();
-            logger.info("Request for file from client: " + httpRequestDirectory);
-            if (httpRequestDirectory.startsWith("/") && !httpRequestDirectory.endsWith("/") && !httpRequestDirectory.contains(".")) {
-                this.responseHtml(this.rootPath, httpRequestDirectory + "/index.html", outputStream);
-                inputStream.close();
-                socket.close();
-            } else if (httpRequestDirectory.startsWith("/") && !httpRequestDirectory.contains(".")) {
-                this.responseHtml(this.rootPath, httpRequestDirectory + "index.html", outputStream);
-                inputStream.close();
-                socket.close();
-            } else if (httpRequestDirectory.endsWith(".htm") || httpRequestDirectory.endsWith(".html")) {
-                if (httpRequestDirectory.endsWith(".htm")) {
-                    String extensionRemoved = httpRequestDirectory.split("\\.")[0];
-                    String redirect = extensionRemoved + ".html";
-                    outputStream.write(ResponseFactory.get302HtmlHeaderBytes(redirect));
-                    outputStream.flush();
-                    outputStream.write(ResponseFactory.get302HtmlMsgBytes());
-                    outputStream.close();
-                } else {
-                    this.responseHtml(this.rootPath, httpRequestDirectory, outputStream);
+            Pair<String, Optional<String>> dirAndLang = new RequestParser(inputStream).http200Parse();   // only english allowed
+            if (dirAndLang.getValue1().isPresent() && dirAndLang.getValue1().get().contains("en-US")) {
+                String http200RequestDirectory = dirAndLang.getValue0();
+                logger.info("Request for file from client: " + http200RequestDirectory);
+                if (http200RequestDirectory.startsWith("/") && !http200RequestDirectory.endsWith("/") && !http200RequestDirectory.contains(".")) {
+                    this.response200Html(this.rootPath, http200RequestDirectory + "/index.html", outputStream);
                     inputStream.close();
                     socket.close();
-                }
-            } else if (httpRequestDirectory.endsWith(".png") || httpRequestDirectory.endsWith(".PNG")) {
-                if (httpRequestDirectory.endsWith(".PNG")) {
-                    String extensionRemoved = httpRequestDirectory.split("\\.")[0];
-                    String redirect = extensionRemoved + ".png";
-                    outputStream.write(ResponseFactory.get302HtmlHeaderBytes(redirect));
-                    outputStream.flush();
-                    outputStream.write(ResponseFactory.get302HtmlMsgBytes());
-                    outputStream.close();
-                } else {
-                    this.responseImage(rootPath, httpRequestDirectory, outputStream);
+                } else if (http200RequestDirectory.startsWith("/") && !http200RequestDirectory.contains(".")) {
+                    this.response200Html(this.rootPath, http200RequestDirectory + "index.html", outputStream);
                     inputStream.close();
                     socket.close();
+                } else if (http200RequestDirectory.endsWith(".htm") || http200RequestDirectory.endsWith(".html")) {
+                    if (http200RequestDirectory.endsWith(".htm")) {
+                        this.response302(http200RequestDirectory, outputStream, ".html");
+                    } else {
+                        this.response200Html(this.rootPath, http200RequestDirectory, outputStream);
+                        inputStream.close();
+                        socket.close();
+                    }
+                } else if (http200RequestDirectory.endsWith(".png") || http200RequestDirectory.endsWith(".PNG")) {
+                    if (http200RequestDirectory.endsWith(".PNG")) {
+                        this.response302(http200RequestDirectory, outputStream, ".png");
+                    } else {
+                        this.response200Image(rootPath, http200RequestDirectory, outputStream);
+                        inputStream.close();
+                        socket.close();
+                    }
                 }
+            } else {
+            this.response403(outputStream);
             }
         } catch (IOException e) {
             logger.error("Cannot get the output streams: ", e);
         }
+
     }
 
-    private void responseImage(String rootPath, String relativePath, OutputStream outputStream) throws IOException {
+    private void response200Image(String rootPath, String relativePath, OutputStream outputStream) throws IOException {
         BufferedOutputStream dataOut = new BufferedOutputStream(outputStream);
         Path path = Paths.get(rootPath, relativePath);
         if (!Files.exists(path)) {
@@ -86,7 +84,7 @@ public class ServerThread extends Thread {
         }
     }
 
-    private void responseHtml(String rootPath, String relativePath, OutputStream outputStream) throws IOException {
+    private void response200Html(String rootPath, String relativePath, OutputStream outputStream) throws IOException {
         BufferedOutputStream dataOut = new BufferedOutputStream(outputStream);
         Path path = Paths.get(rootPath, relativePath);
         if (!Files.exists(path)) {
@@ -103,5 +101,23 @@ public class ServerThread extends Thread {
             logger.info(relativePath + " sent");
         }
     }
+
+    private void response302(String httpRequestDirectory, OutputStream outputStream, String redirectNewExtension) throws IOException {
+        String extensionRemoved = httpRequestDirectory.split("\\.")[0];
+        String redirect = extensionRemoved + redirectNewExtension;
+        outputStream.write(ResponseFactory.get302HtmlHeaderBytes(redirect));
+        outputStream.flush();
+        outputStream.write(ResponseFactory.get302HtmlMsgBytes());
+        outputStream.close();
+    }
+
+    private void response403(OutputStream outputStream) throws IOException{
+        outputStream.write(ResponseFactory.get403HtmlHeaderBytes());
+        outputStream.flush();
+        outputStream.write(ResponseFactory.get403HtmlMsgBytes());
+        outputStream.close();
+        logger.info("403 response sent");
+    }
+
 
 }

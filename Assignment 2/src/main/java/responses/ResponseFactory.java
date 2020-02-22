@@ -50,4 +50,22 @@ public class ResponseFactory {
         }
         return bytes;
     }
+
+    public static byte[] get403HtmlHeaderBytes() {
+        String response = "HTTP/1.1 403 Forbidden" + "\r\n" + "\r\n";
+        return response.getBytes();
+    }
+
+    public static byte[] get403HtmlMsgBytes() {
+        byte[] bytes = new byte[0];
+        try {
+            Path path = Paths.get("src/main/java/responses/folder/403.html");
+            bytes = Files.readAllBytes(path);
+        } catch (IOException e) {
+            logger.error("Cant read 403.html");
+        }
+        return bytes;
+    }
+
+
 }
