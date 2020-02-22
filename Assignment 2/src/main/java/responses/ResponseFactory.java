@@ -11,13 +11,42 @@ import java.nio.file.Paths;
 public class ResponseFactory {
     private static final Logger logger = LoggerFactory.getLogger(ResponseFactory.class);
 
-    public static byte[] get404Bytes() {
+    public static byte[] get404HtmlHeaderBytes() {
+        String response = "HTTP/1.1 404 File Not Found" + "\r\n" + "\r\n";
+        return response.getBytes();
+    }
+
+    public static byte[] get404HtmlMsgBytes() {
         byte[] bytes = new byte[0];
         try {
             Path path = Paths.get("src/main/java/responses/folder/404.html");
             bytes = Files.readAllBytes(path);
         } catch (IOException e) {
             logger.error("Cant read 404.html");
+        }
+        return bytes;
+    }
+
+    public static byte[] get200HtmlHeaderBytes(String contentLength, String contentType) {
+        String response = "HTTP/1.1 200 OK" + "\r\n" +
+                "Content-Length: " + contentLength + "\r\n" +
+                "Content-Type: "+contentType + "\r\n" + "\r\n";
+        return response.getBytes();
+    }
+
+    public static byte[] get302HtmlHeaderBytes(String location) {
+        String response = "HTTP/1.1 302 Found" + "\r\n" +
+                "Location: " + location + "\r\n" + "\r\n";
+        return response.getBytes();
+    }
+
+    public static byte[] get302HtmlMsgBytes() {
+        byte[] bytes = new byte[0];
+        try {
+            Path path = Paths.get("src/main/java/responses/folder/302.html");
+            bytes = Files.readAllBytes(path);
+        } catch (IOException e) {
+            logger.error("Cant read 302.html");
         }
         return bytes;
     }
