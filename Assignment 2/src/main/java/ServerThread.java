@@ -55,8 +55,10 @@ public class ServerThread extends Thread {
                         socket.close();
                     }
                 }
-            } else {
+            } else if (dirAndLang.getValue1().isEmpty() || !dirAndLang.getValue1().get().contains("en-US")){
             this.response403(outputStream);
+            } else {
+                this.response500(outputStream);
             }
         } catch (IOException e) {
             logger.error("Cannot get the output streams: ", e);
@@ -119,5 +121,12 @@ public class ServerThread extends Thread {
         logger.info("403 response sent");
     }
 
+    private void response500(OutputStream outputStream) throws IOException{
+        outputStream.write(ResponseFactory.get500HtmlHeaderBytes());
+        outputStream.flush();
+        outputStream.write(ResponseFactory.get500HtmlMsgBytes());
+        outputStream.close();
+        logger.error("500 response sent, crash");
+    }
 
 }

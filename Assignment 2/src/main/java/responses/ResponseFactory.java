@@ -67,5 +67,21 @@ public class ResponseFactory {
         return bytes;
     }
 
+    public static byte[] get500HtmlHeaderBytes() {
+        String response = "HTTP/1.1 500 Internal Server Error" + "\r\n" + "\r\n";
+        return response.getBytes();
+    }
+
+    public static byte[] get500HtmlMsgBytes() {
+        byte[] bytes = new byte[0];
+        try {
+            Path path = Paths.get("src/main/java/responses/folder/500.html");
+            bytes = Files.readAllBytes(path);
+        } catch (IOException e) {
+            logger.error("Cant read 500.html");
+        }
+        return bytes;
+    }
+
 
 }
