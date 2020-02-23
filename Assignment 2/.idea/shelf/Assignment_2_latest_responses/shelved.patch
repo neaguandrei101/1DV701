@@ -1,0 +1,90 @@
+Index: src/main/java/ServerThread.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import org.javatuples.Pair;\nimport org.slf4j.Logger;\nimport org.slf4j.LoggerFactory;\n\nimport requests.RequestParser;\nimport responses.ResponseFactory;\n\nimport java.io.*;\nimport java.net.Socket;\nimport java.nio.file.Files;\nimport java.nio.file.Path;\nimport java.nio.file.Paths;\nimport java.util.Optional;\n\npublic class ServerThread extends Thread {\n    private static final Logger logger = LoggerFactory.getLogger(ServerThread.class);\n    private Socket socket;\n    private String rootPath;\n\n    public ServerThread(Socket socket, String rootPath) {\n        this.socket = socket;\n        this.rootPath = rootPath;\n    }\n\n    @Override\n    public void run() {\n        try (OutputStream outputStream = socket.getOutputStream();\n             InputStream inputStream = socket.getInputStream()) {\n            Pair<String, Optional<String>> dirAndLang = new RequestParser(inputStream).http200Parse();   // only english allowed\n            if (dirAndLang.getValue1().isPresent() && dirAndLang.getValue1().get().contains(\"en-US\")) {\n                String http200RequestDirectory = dirAndLang.getValue0();\n                logger.info(\"Request for file from client: \" + http200RequestDirectory);\n                if (http200RequestDirectory.startsWith(\"/\") && !http200RequestDirectory.endsWith(\"/\") && !http200RequestDirectory.contains(\".\")) {\n                    this.response200Html(this.rootPath, http200RequestDirectory + \"/index.html\", outputStream);\n                    inputStream.close();\n                    socket.close();\n                } else if (http200RequestDirectory.startsWith(\"/\") && !http200RequestDirectory.contains(\".\")) {\n                    this.response200Html(this.rootPath, http200RequestDirectory + \"index.html\", outputStream);\n                    inputStream.close();\n                    socket.close();\n                } else if (http200RequestDirectory.endsWith(\".htm\") || http200RequestDirectory.endsWith(\".html\")) {\n                    if (http200RequestDirectory.endsWith(\".htm\")) {\n                        this.response302(http200RequestDirectory, outputStream, \".html\");\n                    } else {\n                        this.response200Html(this.rootPath, http200RequestDirectory, outputStream);\n                        inputStream.close();\n                        socket.close();\n                    }\n                } else if (http200RequestDirectory.endsWith(\".png\") || http200RequestDirectory.endsWith(\".PNG\")) {\n                    if (http200RequestDirectory.endsWith(\".PNG\")) {\n                        this.response302(http200RequestDirectory, outputStream, \".png\");\n                    } else {\n                        this.response200Image(rootPath, http200RequestDirectory, outputStream);\n                        inputStream.close();\n                        socket.close();\n                    }\n                }\n            } else if (dirAndLang.getValue1().isEmpty() || !dirAndLang.getValue1().get().contains(\"en-US\")){\n            this.response403(outputStream);\n            } else {\n                this.response500(outputStream);\n            }\n        } catch (IOException e) {\n            logger.error(\"Cannot get the output streams: \", e);\n        }\n\n    }\n\n    private void response200Image(String rootPath, String relativePath, OutputStream outputStream) throws IOException {\n        BufferedOutputStream dataOut = new BufferedOutputStream(outputStream);\n        Path path = Paths.get(rootPath, relativePath);\n        if (!Files.exists(path)) {\n            dataOut.write(ResponseFactory.get404HtmlHeaderBytes());\n            dataOut.flush();\n            dataOut.write(ResponseFactory.get404HtmlMsgBytes());\n            logger.info(\"404 Error sent\");\n            dataOut.close();\n        } else {\n            byte[] messageBytes = Files.readAllBytes(path);\n            byte[] headerBytes = ResponseFactory.get200HtmlHeaderBytes(String.valueOf(messageBytes.length), \"image/png\");\n            dataOut.write(headerBytes);\n            dataOut.flush();\n            dataOut.write(messageBytes);\n            outputStream.close();\n            logger.info(relativePath + \" sent\");\n        }\n    }\n\n    private void response200Html(String rootPath, String relativePath, OutputStream outputStream) throws IOException {\n        BufferedOutputStream dataOut = new BufferedOutputStream(outputStream);\n        Path path = Paths.get(rootPath, relativePath);\n        if (!Files.exists(path)) {\n            dataOut.write(ResponseFactory.get404HtmlHeaderBytes());\n            dataOut.flush();\n            dataOut.write(ResponseFactory.get404HtmlMsgBytes());\n            dataOut.close();\n        } else {\n            byte[] messageBytes = Files.readAllBytes(path);\n            byte[] headerBytes = ResponseFactory.get200HtmlHeaderBytes(String.valueOf(messageBytes.length), \"text/html\");\n            outputStream.write(headerBytes);\n            outputStream.write(messageBytes);\n            outputStream.close();\n            logger.info(relativePath + \" sent\");\n        }\n    }\n\n    private void response302(String httpRequestDirectory, OutputStream outputStream, String redirectNewExtension) throws IOException {\n        String extensionRemoved = httpRequestDirectory.split(\"\\\\.\")[0];\n        String redirect = extensionRemoved + redirectNewExtension;\n        outputStream.write(ResponseFactory.get302HtmlHeaderBytes(redirect));\n        outputStream.flush();\n        outputStream.write(ResponseFactory.get302HtmlMsgBytes());\n        outputStream.close();\n    }\n\n    private void response403(OutputStream outputStream) throws IOException{\n        outputStream.write(ResponseFactory.get403HtmlHeaderBytes());\n        outputStream.flush();\n        outputStream.write(ResponseFactory.get403HtmlMsgBytes());\n        outputStream.close();\n        logger.info(\"403 response sent\");\n    }\n\n    private void response500(OutputStream outputStream) throws IOException{\n        outputStream.write(ResponseFactory.get500HtmlHeaderBytes());\n        outputStream.flush();\n        outputStream.write(ResponseFactory.get500HtmlMsgBytes());\n        outputStream.close();\n        logger.error(\"500 response sent, crash\");\n    }\n\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ServerThread.java	(revision 40ece3b148b2f41de7d25b4eacfbc8d8738c7bb7)
++++ src/main/java/ServerThread.java	(date 1582425260594)
+@@ -1,4 +1,5 @@
+ import org.javatuples.Pair;
++import org.javatuples.Triplet;
+ import org.slf4j.Logger;
+ import org.slf4j.LoggerFactory;
+ 
+@@ -55,10 +56,6 @@
+                         socket.close();
+                     }
+                 }
+-            } else if (dirAndLang.getValue1().isEmpty() || !dirAndLang.getValue1().get().contains("en-US")){
+-            this.response403(outputStream);
+-            } else {
+-                this.response500(outputStream);
+             }
+         } catch (IOException e) {
+             logger.error("Cannot get the output streams: ", e);
+@@ -113,7 +110,7 @@
+         outputStream.close();
+     }
+ 
+-    private void response403(OutputStream outputStream) throws IOException{
++    private void response403(OutputStream outputStream) throws IOException {
+         outputStream.write(ResponseFactory.get403HtmlHeaderBytes());
+         outputStream.flush();
+         outputStream.write(ResponseFactory.get403HtmlMsgBytes());
+@@ -121,7 +118,7 @@
+         logger.info("403 response sent");
+     }
+ 
+-    private void response500(OutputStream outputStream) throws IOException{
++    private void response500(OutputStream outputStream) throws IOException {
+         outputStream.write(ResponseFactory.get500HtmlHeaderBytes());
+         outputStream.flush();
+         outputStream.write(ResponseFactory.get500HtmlMsgBytes());
+Index: src/main/java/requests/RequestParser.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package requests;\n\nimport org.javatuples.Pair;\n\nimport java.io.BufferedReader;\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.io.InputStreamReader;\nimport java.util.Optional;\n\npublic class RequestParser {\n    InputStream inputStream;\n\n    public RequestParser(InputStream inputStream) {\n        this.inputStream = inputStream;\n    }\n\n    /* returns a tuple with the first element containing the 200 OK directory\n       and the second in the tuple an Optional containing the \"Accept-Language:\"\n       optional header value, used for 403 Forbidden\n     */\n    public Pair<String, Optional<String>> http200Parse() throws IOException {\n        var in = new BufferedReader(new InputStreamReader(inputStream));\n        String str = in.readLine();\n        String[] words = str.split(\"\\\\s+\");\n        String acceptLanguage = null;\n        for (String line = in.readLine(); !line.equals(\"\"); line = in.readLine()) {\n            if (line.startsWith(\"Accept-Language:\")) {\n                acceptLanguage = line;\n                break;\n            }\n        }\n        Optional<String> acceptLanguageOptional = Optional.ofNullable(acceptLanguage);\n        String[] splitStr = null;\n        String acceptLanguageValue = null;\n        if (acceptLanguageOptional.isPresent()) {\n            splitStr =acceptLanguageOptional.get().split(\"\\\\s+\");\n            acceptLanguageValue = splitStr[1];\n        }\n        acceptLanguageOptional = Optional.ofNullable(acceptLanguageValue);\n        return new Pair<>(words[1], acceptLanguageOptional);\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/requests/RequestParser.java	(revision 40ece3b148b2f41de7d25b4eacfbc8d8738c7bb7)
++++ src/main/java/requests/RequestParser.java	(date 1582425260602)
+@@ -1,6 +1,7 @@
+ package requests;
+ 
+ import org.javatuples.Pair;
++import org.javatuples.Triplet;
+ 
+ import java.io.BufferedReader;
+ import java.io.IOException;
+@@ -19,14 +20,14 @@
+        and the second in the tuple an Optional containing the "Accept-Language:"
+        optional header value, used for 403 Forbidden
+      */
+-    public Pair<String, Optional<String>> http200Parse() throws IOException {
++    public Triplet<String, String, Optional<String>> http200Parse() throws IOException {
+         var in = new BufferedReader(new InputStreamReader(inputStream));
+-        String str = in.readLine();
+-        String[] words = str.split("\\s+");
++        String reqLine = in.readLine();
++        String[] words = reqLine.split("\\s+");
+         String acceptLanguage = null;
+-        for (String line = in.readLine(); !line.equals(""); line = in.readLine()) {
+-            if (line.startsWith("Accept-Language:")) {
+-                acceptLanguage = line;
++        for (String reqHeaders = in.readLine(); !reqHeaders.equals(""); reqHeaders = in.readLine()) {
++            if (reqHeaders.startsWith("Accept-Language:")) {
++                acceptLanguage = reqHeaders;
+                 break;
+             }
+         }
+@@ -38,6 +39,6 @@
+             acceptLanguageValue = splitStr[1];
+         }
+         acceptLanguageOptional = Optional.ofNullable(acceptLanguageValue);
+-        return new Pair<>(words[1], acceptLanguageOptional);
++        return new Triplet<>(words[0], words[1], acceptLanguageOptional);
+     }
+ }
