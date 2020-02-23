@@ -1,6 +1,7 @@
 package requests;
 
 import org.javatuples.Pair;
+import org.javatuples.Triplet;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,7 +20,7 @@ public class RequestParser {
        and the second in the tuple an Optional containing the "Accept-Language:"
        optional header value, used for 403 Forbidden
      */
-    public Pair<String, Optional<String>> http200Parse() throws IOException {
+    public Triplet<String, Optional<String>, String> http200Parse() throws IOException {
         var in = new BufferedReader(new InputStreamReader(inputStream));
         String str = in.readLine();
         String[] words = str.split("\\s+");
@@ -38,6 +39,6 @@ public class RequestParser {
             acceptLanguageValue = splitStr[1];
         }
         acceptLanguageOptional = Optional.ofNullable(acceptLanguageValue);
-        return new Pair<>(words[1], acceptLanguageOptional);
+        return new Triplet<>(words[1], acceptLanguageOptional, str);
     }
 }

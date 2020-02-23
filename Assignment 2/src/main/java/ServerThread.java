@@ -1,4 +1,4 @@
-import org.javatuples.Pair;
+import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,9 +26,15 @@ public class ServerThread extends Thread {
     public void run() {
         try (OutputStream outputStream = socket.getOutputStream();
              InputStream inputStream = socket.getInputStream()) {
-            Pair<String, Optional<String>> dirAndLang = new RequestParser(inputStream).http200Parse();   // only english allowed
-            if (dirAndLang.getValue1().isPresent() && dirAndLang.getValue1().get().contains("en-US")) {
-                String http200RequestDirectory = dirAndLang.getValue0();
+            Triplet<String, Optional<String>, String> header = new RequestParser(inputStream).http200Parse();
+            if(!header.getValue2().contains("GET")) {
+                this.response500(outputStream);
+                inputStream.close();
+            }
+            // only english allowed
+            // replace the if statement argument with true to test with morgan's tests
+            if (header.getValue1().isPresent() && header.getValue1().get().contains("en-US")) {
+                String http200RequestDirectory = header.getValue0();
                 logger.info("Request for file from client: " + http200RequestDirectory);
                 if (http200RequestDirectory.startsWith("/") && !http200RequestDirectory.endsWith("/") && !http200RequestDirectory.contains(".")) {
                     this.response200Html(this.rootPath, http200RequestDirectory + "/index.html", outputStream);
@@ -55,13 +61,13 @@ public class ServerThread extends Thread {
                         socket.close();
                     }
                 }
-            } else if (dirAndLang.getValue1().isEmpty() || !dirAndLang.getValue1().get().contains("en-US")){
+            } else if (header.getValue1().isEmpty() || !header.getValue1().get().contains("en-US")){
             this.response403(outputStream);
             } else {
                 this.response500(outputStream);
             }
         } catch (IOException e) {
-            logger.error("Cannot get the output streams: ", e);
+            logger.error("Cannot get the streams: ", e);
         }
 
     }
