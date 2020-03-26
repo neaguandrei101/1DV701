@@ -51,4 +51,11 @@ public class TCPEchoClient extends NetworkLayer {
             }
         }
     }
+    @Override
+    public void checkMessage() {
+        if (super.myMessage.isEmpty()) {
+            System.err.println("Message is not valid.");
+            System.exit(1);
+        }
+    }
 }

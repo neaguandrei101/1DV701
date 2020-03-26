@@ -46,6 +46,8 @@ public abstract class NetworkLayer {
         if (this.myMessage.length() > this.bufferSize) {
             System.err.println("The message is too long for the current buffer, it will cause problems");
         }
+        
+        checkMessage();
     }
 
     //Used by TCPEchoClient
@@ -156,4 +158,7 @@ public abstract class NetworkLayer {
         }
         return buffer > 0 && buffer <= 65515;
     }
+
+    public abstract void checkMessage();
+
 }

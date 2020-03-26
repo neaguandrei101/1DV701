@@ -115,4 +115,11 @@ public class UDPEchoClient extends NetworkLayer {
             System.err.print("Sent and received msg not equal!\n");
         }
     }
+    @Override
+    public void checkMessage() {
+        if (super.myMessage.isEmpty()) {
+            System.err.println("Message is not valid.");
+            System.exit(1);
+        }
+    }
 }

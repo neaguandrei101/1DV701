@@ -9,7 +9,7 @@ public class TCPEchoServer extends NetworkLayer {
 
     public static void main(String[] args) {
         TCPEchoServer echoServer = new TCPEchoServer(args[0], args[1]);
-        //TODO add system exit
+
         ServerSocket serverSocket = null;
         try {
             serverSocket = new ServerSocket();
@@ -17,6 +17,7 @@ public class TCPEchoServer extends NetworkLayer {
             serverSocket.bind(localBindPoint);
         } catch (IOException e) {
             System.err.println("Cannot start socket.");
+            System.exit(1);
         }
 
         while (true) {
@@ -57,6 +58,13 @@ public class TCPEchoServer extends NetworkLayer {
                     break;
                 }
             }
+        }
+    }
+    @Override
+    public void checkMessage() {
+        if (super.myMessage.isEmpty()) {
+            System.err.println("Message is not valid.");
+            System.exit(1);
         }
     }
 }
