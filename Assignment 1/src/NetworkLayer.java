@@ -74,7 +74,7 @@ public abstract class NetworkLayer {
         }
         this.serverPort = Integer.parseInt(serverPort);
 
-        this.myMessage = "a".repeat(Integer.parseInt(messageSize));
+        this.myMessage = "My message";
         if (this.myMessage.length() > this.bufferSize) {
             System.err.println("The message is too long for the current buffer, it will cause problems");
         }

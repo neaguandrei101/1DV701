@@ -46,13 +46,23 @@ public class TCPEchoServer extends NetworkLayer {
                 try {
                     InputStream inputStream = new DataInputStream(clientSocket.getInputStream());
                     OutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream());
-                    int read = inputStream.read(buf);
+                    StringBuilder stringBuilder = new StringBuilder();
+                    String receivedMessage;
+                    int read;
+                    do {
+                        read = inputStream.read(buf, 0, buf.length);
+                        if (read == -1) {
+                            break;
+                        }
+                        receivedMessage = new String(buf, 0, read);
+                        stringBuilder.append(receivedMessage);
+                    } while (inputStream.available() > 0);
+
+                    outputStream.write(stringBuilder.toString().getBytes());
                     if (read == -1) {
                         break;
                     }
-                    String receivedMessage = new String(buf, 0, read);
-                    System.out.println("Message sent.");
-                    outputStream.write(receivedMessage.getBytes());
+                    System.out.printf("Message sent: %s\n", stringBuilder.toString());
                 } catch (IOException e) {
                     System.err.println("Cannot read or write.");
                     break;
@@ -60,6 +70,7 @@ public class TCPEchoServer extends NetworkLayer {
             }
         }
     }
+
     @Override
     public void checkMessage() {
         if (super.myMessage.isEmpty()) {

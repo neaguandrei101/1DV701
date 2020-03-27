@@ -31,26 +31,37 @@ public class TCPEchoClient extends NetworkLayer {
             System.exit(1);
         }
         while (true) {
-            int read = 0;
             try {
                 writeStream.write(echoClient.myMessage.getBytes(), 0, echoClient.myMessage.length());
-                read = readStream.read(echoClient.buf);
+
+                StringBuilder stringBuilder = new StringBuilder();
+                String receivedMessage;
+                do {
+                    int read = readStream.read(echoClient.buf, 0, echoClient.buf.length);
+                    if (read == -1) {
+                        break;
+                    }
+                    receivedMessage = new String(echoClient.buf, 0, read);
+                    stringBuilder.append(receivedMessage);
+                } while (readStream.available() > 0);
+
+                if (stringBuilder.toString().compareTo(echoClient.myMessage) == 0) {
+                    System.out.println("Correct message sent and received.");
+                } else {
+                    System.err.println("Wrong message received. Message:" + stringBuilder.toString());
+                }
             } catch (IOException e) {
                 System.err.println("Cannot read or write.");
+                System.exit(1);
             }
-            if (!(read >= 0)) {
-                break;
-            }
-            String receivedMsg = new String(echoClient.buf, 0, read);
-
-            if (receivedMsg.compareTo(echoClient.myMessage) == 0) {
-                System.out.println("Correct message sent and received.");
-            } else {
-                System.err.println("Wrong message");
-
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
+
     @Override
     public void checkMessage() {
         if (super.myMessage.isEmpty()) {
