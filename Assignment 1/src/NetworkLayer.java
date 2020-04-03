@@ -51,7 +51,7 @@ public abstract class NetworkLayer {
     }
 
     //Used by TCPEchoClient
-    public NetworkLayer(String buffer, String ipAddress, String serverPort, String messageSize) {
+    public NetworkLayer(String buffer, String ipAddress, String serverPort) {
         //check buffer
         if (!NetworkLayer.checkBufferSize(buffer))
             throw new IllegalArgumentException(
@@ -74,7 +74,7 @@ public abstract class NetworkLayer {
         }
         this.serverPort = Integer.parseInt(serverPort);
 
-        this.myMessage = "My message";
+        this.myMessage = "message";
         if (this.myMessage.length() > this.bufferSize) {
             System.err.println("The message is too long for the current buffer, it will cause problems");
         }

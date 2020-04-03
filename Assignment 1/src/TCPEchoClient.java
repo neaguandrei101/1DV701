@@ -8,12 +8,12 @@ import java.net.SocketAddress;
 public class TCPEchoClient extends NetworkLayer {
     public Socket socket;
 
-    public TCPEchoClient(String buffer, String ipAddress, String serverPort, String messageSize) {
-        super(buffer, ipAddress, serverPort, messageSize);
+    public TCPEchoClient(String buffer, String ipAddress, String serverPort) {
+        super(buffer, ipAddress, serverPort);
     }
 
     public static void main(String[] args) {
-        TCPEchoClient echoClient = new TCPEchoClient(args[0], args[1], args[2], args[3]);
+        TCPEchoClient echoClient = new TCPEchoClient(args[0], args[1], args[2]);
         echoClient.socket = new Socket();
         SocketAddress address = new InetSocketAddress(echoClient.serverIp, echoClient.serverPort);
         try {
