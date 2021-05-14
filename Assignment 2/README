@@ -1,0 +1,2 @@
+HTTP 1.1 server, multithreaded, with limited features.
+Check the subdirectory to see the responses and requests implemented.
